@@ -87,7 +87,7 @@ def _link_static_library(
         ),
     )
 
-def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = []):
+def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = [],  cflags=[], ldflags=[]):
     """Compile and link C++ source into a static library"""
     cc_toolchain = find_cpp_toolchain(ctx)
     feature_configuration = cc_common.configure_features(
@@ -98,6 +98,7 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = []):
     )
 
     compilation_contexts = [dep[CcInfo].compilation_context for dep in deps]
+    #TODO: split this into two commands between "fast" and slow sources to feed different commands different flags
     cc_compilation_context, cc_compilation_outputs = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
@@ -105,6 +106,7 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = []):
         cc_toolchain = cc_toolchain,
         srcs = srcs,
         defines = defines,
+        user_compile_flags=cflags,
         public_hdrs = hdrs,
         compilation_contexts = compilation_contexts,
     )

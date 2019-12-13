@@ -159,8 +159,9 @@ def _verilator_cc_library(ctx):
 
     # Do actual compile
     defines = ["VM_TRACE"] if ctx.attr.trace else []
-    deps = list(verilator_toolchain.libs)
-    print(deps)
+    deps = list(verilator_toolchain.libs) 
+    if ctx.attr.cpp_defines:
+      defines = defines + ctx.attr.cpp_defines
     #if ctx.attr.sysc:
     #    deps.append(ctx.attr._systemc)
 
@@ -170,6 +171,7 @@ def _verilator_cc_library(ctx):
         hdrs = hdrs,
         defines = defines,
         deps = deps,
+        cflags=cflags
     )
 
 verilator_cc_library = rule(
@@ -209,6 +211,14 @@ verilator_cc_library = rule(
         ),
         "ldflags": attr.string_list(
             doc = "LD flags for the compiled verilated library",
+            mandatory = False
+        ),
+        "cpp_includes" : attr.string_list(
+            doc = "Include paths to be passed to the verilator output",
+            mandatory = False,
+        ),
+        "cpp_defines" : attr.string_list(
+            doc = "Defines to be passed to verilator output",
             mandatory = False
         ),
         "sysc": attr.bool(

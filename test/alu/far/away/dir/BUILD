@@ -11,6 +11,8 @@ verilator_cc_library(
     hdrs = ["//:includes"],#"alu.sv", "alu2.sv"], 
     srcs = ["//:srcs" ],
     includes = ["includes"],
+    cpp_defines=["DVL_THREADED"],
+    cflags=[ "-std=c++11", "-fPIC"]
     #deps = [":alu_lib"],
 )
 
