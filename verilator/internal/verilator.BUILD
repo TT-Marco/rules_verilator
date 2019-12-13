@@ -3,6 +3,8 @@ package(default_visibility = ["//visibility:private"])
 licenses(["notice"])
 
 load("@rules_verilator//verilator/internal:flex_lexer_h.bzl", "flex_lexer_h")
+load("@io_bazel_rules_perl//perl:perl.bzl", "perl_binary")
+
 flex_lexer_h(name = "flex_lexer_h")
 
 exports_files([
@@ -216,7 +218,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "verilator_executable",
+    name = "verilator_bin",
     srcs = ["src/Verilator.cpp"],
     visibility = ["//visibility:public"],
     deps = [":verilator_libV3"],

@@ -68,7 +68,7 @@ def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
         command = _COPY_TREE_SH,
         inputs = [idir],
         outputs = [odir],
-        progress_message = progress_message,
+        progress_message = progress_message
     )
 
     return odir
@@ -128,12 +128,16 @@ def _verilator_cc_library(ctx):
         args.add_all(ldflags, before_each="-LDFLAGS")
     args.add_all(srcs)
     args.add_all(ctx.attr.vopts, expand_directories = False)
-    ctx.actions.run(
+    ctx.actions.run_shell(
         arguments = [args],
-        executable = verilator_toolchain.verilator_executable,
+        tools = [verilator_toolchain.verilator_bin],
+        command = verilator_toolchain.verilator_bin.path,
         inputs = inputs,
         outputs = [verilator_output],
         progress_message = "[Verilator] Compiling {}".format(ctx.label),
+        execution_requirements = {
+        "no-sandbox": "1",
+        }
     )
 
     # Extract out just C++ files
@@ -160,7 +164,6 @@ def _verilator_cc_library(ctx):
     # Do actual compile
     defines = ["VM_TRACE"] if ctx.attr.trace else []
     deps = list(verilator_toolchain.libs)
-    print(deps)
     #if ctx.attr.sysc:
     #    deps.append(ctx.attr._systemc)
 

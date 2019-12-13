@@ -108,7 +108,6 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = []):
         public_hdrs = hdrs,
         compilation_contexts = compilation_contexts,
     )
-
     # TODO: Custom link command
     # Workaround for https://github.com/bazelbuild/bazel/issues/6309
     # This should be replaced by cc_common.link() when api is fixed

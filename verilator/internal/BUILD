@@ -7,6 +7,6 @@ load("@rules_verilator//verilator/internal:versions.bzl", "VERSION_INFO")
         "@verilator_v{}//:libverilator".format(version),
         "@verilator_v{}//:svdpi".format(version),
     ],
-    verilator = "@verilator_v{}//:verilator_executable".format(version),
+    verilator = "@verilator_v{}//:verilator_bin".format(version)
     visibility = ["//visibility:public"],
 ) for version in VERSION_INFO.keys()]

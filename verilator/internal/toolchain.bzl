@@ -1,6 +1,6 @@
 TOOLCHAIN_TYPE = "@rules_verilator//verilator:toolchain_type"
 
-ToolchainInfo = provider(fields = ["files", "libs", "vars", "verilator_executable"])
+ToolchainInfo = provider(fields = ["files", "libs", "vars", "verilator_bin"])
 
 def _verilator_toolchain_info(ctx):
     runfiles = ctx.attr.verilator[DefaultInfo].default_runfiles.files
@@ -11,7 +11,7 @@ def _verilator_toolchain_info(ctx):
         ),
         libs = ctx.attr.libs,
         vars = {},
-        verilator_executable = ctx.executable.verilator,
+        verilator_bin = ctx.executable.verilator
     )
 
     return [
