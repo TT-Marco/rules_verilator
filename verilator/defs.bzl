@@ -213,10 +213,6 @@ verilator_cc_library = rule(
             doc = "LD flags for the compiled verilated library",
             mandatory = False
         ),
-        "cpp_includes" : attr.string_list(
-            doc = "Include paths to be passed to the verilator output",
-            mandatory = False,
-        ),
         "cpp_defines" : attr.string_list(
             doc = "Defines to be passed to verilator output",
             mandatory = False
