@@ -169,7 +169,7 @@ cc_library(
 )
 
 cc_library(
-    name = "libverilator",
+    name = "verilator_dpi",
     srcs = [
         "include/gtkwave/fastlz.h",
         "include/gtkwave/fst_config.h",
@@ -193,7 +193,8 @@ cc_library(
         "include/verilated_sym_props.h",
         "include/verilated_vcd_c.h",
         "include/verilatedos.h",
-        "include/verilated_cov.h"
+        "include/verilated_cov.h",
+        "include/verilated_cov_key.h"
     ],
     strip_include_prefix = "include/",
     visibility = ["//visibility:public"],
