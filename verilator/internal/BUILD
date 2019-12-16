@@ -4,7 +4,7 @@ load("@rules_verilator//verilator/internal:versions.bzl", "VERSION_INFO")
 [verilator_toolchain_info(
     name = "toolchain_v{}".format(version),
     libs = [
-        "@verilator_v{}//:libverilator".format(version),
+        "@verilator_v{}//:verilator_dpi".format(version),
         "@verilator_v{}//:svdpi".format(version),
     ],
     verilator = "@verilator_v{}//:verilator_executable".format(version),
