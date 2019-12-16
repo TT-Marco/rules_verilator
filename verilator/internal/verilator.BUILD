@@ -181,7 +181,8 @@ cc_library(
         "include/verilated_imp.h",
         "include/verilated_syms.h",
         "include/verilated_vcd_c.cpp",
-        "include/verilated_cov.cpp"
+        "include/verilated_cov.cpp",
+        "include/verilated_dpi.cpp"
     ],
     hdrs = [
         "include/verilated_config.h",
