@@ -69,12 +69,14 @@ def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
     args = ctx.actions.args()
     args.add(odir.path)
     args.add_all([idir], map_each = map_each)
-    print(args)
     ctx.actions.run_shell(
         arguments = [args],
         command = _COPY_TREE_SH,
         inputs = [idir],
         outputs = [odir],
+        execution_requirements = {
+            "no-remote": "1",
+        },
         progress_message = progress_message,
     )
 
@@ -142,8 +144,7 @@ def _verilator_cc_library(ctx):
         inputs = inputs,
         outputs = [verilator_output],
         progress_message = "[Verilator] Compiling {}".format(ctx.label),
-    )
-    print(verilator_output.path)
+    ) 
     # Extract out just C++ files
     # Work around for https://github.com/bazelbuild/bazel/pull/8269
     _copy_tree(
