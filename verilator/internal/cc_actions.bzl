@@ -10,10 +10,11 @@ def _link_static_library(
         name,
         actions,
         feature_configuration,
-        compilation_outputs,
+        compilation_outputs, 
         cc_toolchain,
         user_link_flags = [],
-        linking_contexts = []):
+        linking_contexts = [],
+        compilation_outputs_slow=[]):
     """Link object files into a static library"""
     static_library = actions.declare_file("lib{name}.a".format(name = name))
     link_tool = cc_common.get_tool_for_action(
@@ -41,7 +42,8 @@ def _link_static_library(
 
     # Extract the object files
     object_files = compilation_outputs.object_files(use_pic = False)
-
+    if compilation_outputs_slow != []:
+      object_files = object_files + compilation_outputs_slow.object_files(use_pic=False)
     # Run linker
     args = actions.args()
     args.add_all(link_flags)
@@ -87,7 +89,7 @@ def _link_static_library(
         ),
     )
 
-def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = [],  cflags=[], ldflags=[]):
+def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines = [],  cflags=[], ldflags=[], fast_opt=[],slow_opt=[]):
     """Compile and link C++ source into a static library"""
     cc_toolchain = find_cpp_toolchain(ctx)
     feature_configuration = cc_common.configure_features(
@@ -98,7 +100,17 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = [],  cfl
     )
 
     compilation_contexts = [dep[CcInfo].compilation_context for dep in deps]
-    #TODO: split this into two commands between "fast" and slow sources to feed different commands different flags
+    #TODO: split this into two commands between "fast" and slow sources to feed different commands different flags 
+    fst_src=[]
+    slow_src=[]
+    #for item in srcs:
+    #  print(item.path)
+    #  if "__Slow" in item.basename:
+    #    slow_src.append(item)
+    #  else:
+    #    fst_src.append(item)
+    #print(fst_src)
+    #print(slow_src)
     cc_compilation_context, cc_compilation_outputs = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
@@ -106,10 +118,26 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = [],  cfl
         cc_toolchain = cc_toolchain,
         srcs = srcs,
         defines = defines,
-        user_compile_flags=cflags,
+        user_compile_flags=cflags + fast_opt,
         public_hdrs = hdrs,
         compilation_contexts = compilation_contexts,
     )
+    cc_compilation_outputs_slow=[]
+    if slow_srcs != []:
+      print(slow_srcs)
+      cc_compilation_context_slow, cc_compilation_outputs_slow = cc_common.compile(
+          name = ctx.label.name,
+          actions = ctx.actions,
+          feature_configuration = feature_configuration,
+          cc_toolchain = cc_toolchain,
+          srcs = slow_srcs,
+          defines = defines,
+          user_compile_flags=cflags + slow_opt,
+          public_hdrs = hdrs,
+          compilation_contexts = compilation_contexts,
+      )
+     # cc_compilation_outputs = cc_compilation_outputs + cc_compilation_outputs_slow
+
 
     # TODO: Custom link command
     # Workaround for https://github.com/bazelbuild/bazel/issues/6309
@@ -118,10 +146,11 @@ def cc_compile_and_link_static_library(ctx, srcs, hdrs, deps, defines = [],  cfl
     linking_info = _link_static_library(
         name = ctx.label.name,
         actions = ctx.actions,
-        compilation_outputs = cc_compilation_outputs,
+        compilation_outputs = cc_compilation_outputs, 
         cc_toolchain = cc_toolchain,
         feature_configuration = feature_configuration,
         linking_contexts = linking_contexts,
+        compilation_outputs_slow = cc_compilation_outputs_slow
     )
 
     return [

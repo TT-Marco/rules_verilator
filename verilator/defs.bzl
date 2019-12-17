@@ -42,9 +42,15 @@ sv_library = rule(
 _CPP_SRC = ["cc", "cpp", "cxx", "c++"]
 _HPP_SRC = ["h", "hh", "hpp"]
 
+def _only_cpp_slow(f):
+    """Filter out slow files"""
+    if "Slow" in f.path or f.extension in _HPP_SRC:
+      return f.path
+    return None
+
 def _only_cpp(f):
-    """Filter for just C++ source/headers"""
-    if f.extension in _CPP_SRC + _HPP_SRC:
+    """Filter for just non-slow C++ source/headers"""
+    if f.extension in _CPP_SRC + _HPP_SRC and "Slow" not in f.path:
         return f.path
     return None
 
@@ -63,6 +69,7 @@ def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
     args = ctx.actions.args()
     args.add(odir.path)
     args.add_all([idir], map_each = map_each)
+    print(args)
     ctx.actions.run_shell(
         arguments = [args],
         command = _COPY_TREE_SH,
@@ -107,6 +114,7 @@ def _verilator_cc_library(ctx):
     # Output directories/files
     verilator_output = ctx.actions.declare_directory(prefix + "-gen")
     verilator_output_cpp = ctx.actions.declare_directory(prefix + ".cpp")
+    verilator_output_slow = ctx.actions.declare_directory(prefix + "__Slow.cpp")
     verilator_output_hpp = ctx.actions.declare_directory(prefix + ".h")
 
     # Run Verilator
@@ -135,9 +143,18 @@ def _verilator_cc_library(ctx):
         outputs = [verilator_output],
         progress_message = "[Verilator] Compiling {}".format(ctx.label),
     )
-
+    print(verilator_output.path)
     # Extract out just C++ files
     # Work around for https://github.com/bazelbuild/bazel/pull/8269
+    _copy_tree(
+        ctx,
+        verilator_output,
+        verilator_output_slow,
+        map_each = _only_cpp_slow,
+        progress_message = "[Verilator] Extracting Slow C++ source files",
+    )
+
+
     _copy_tree(
         ctx,
         verilator_output,
@@ -145,6 +162,9 @@ def _verilator_cc_library(ctx):
         map_each = _only_cpp,
         progress_message = "[Verilator] Extracting C++ source files",
     )
+       
+
+
     _copy_tree(
         ctx,
         verilator_output,
@@ -159,6 +179,8 @@ def _verilator_cc_library(ctx):
 
     # Do actual compile
     defines = ["VM_TRACE"] if ctx.attr.trace else []
+    fast_opt = ctx.attr.fast_copts if ctx.attr.fast_copts else []
+    slow_opt = ctx.attr.slow_copts if ctx.attr.slow_copts else []
     deps = list(verilator_toolchain.libs) 
     if ctx.attr.cpp_defines:
       defines = defines + ctx.attr.cpp_defines
@@ -168,10 +190,14 @@ def _verilator_cc_library(ctx):
     return cc_compile_and_link_static_library(
         ctx,
         srcs = srcs,
+        slow_srcs = [verilator_output_slow],
         hdrs = hdrs,
         defines = defines,
         deps = deps,
-        cflags=cflags
+        cflags=cflags,
+        ldflags=ldflags,
+        fast_opt=fast_opt,
+        slow_opt=slow_opt
     )
 
 verilator_cc_library = rule(
@@ -215,6 +241,14 @@ verilator_cc_library = rule(
         ),
         "cpp_defines" : attr.string_list(
             doc = "Defines to be passed to verilator output",
+            mandatory = False
+        ),
+        "fast_copts"  : attr.string_list(
+            doc = "compiler flags for fast verilator output",
+            mandatory = False
+        ),
+        "slow_copts"  : attr.string_list(
+            doc = "compiler flags for slow verilator output",
             mandatory = False
         ),
         "sysc": attr.bool(
