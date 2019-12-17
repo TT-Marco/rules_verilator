@@ -100,17 +100,6 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
     )
 
     compilation_contexts = [dep[CcInfo].compilation_context for dep in deps]
-    #TODO: split this into two commands between "fast" and slow sources to feed different commands different flags 
-    fst_src=[]
-    slow_src=[]
-    #for item in srcs:
-    #  print(item.path)
-    #  if "__Slow" in item.basename:
-    #    slow_src.append(item)
-    #  else:
-    #    fst_src.append(item)
-    #print(fst_src)
-    #print(slow_src)
     cc_compilation_context, cc_compilation_outputs = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
@@ -123,8 +112,7 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         compilation_contexts = compilation_contexts,
     )
     cc_compilation_outputs_slow=[]
-    if slow_srcs != []:
-      print(slow_srcs)
+    if slow_srcs != None:
       cc_compilation_context_slow, cc_compilation_outputs_slow = cc_common.compile(
           name = ctx.label.name,
           actions = ctx.actions,
