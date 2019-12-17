@@ -12,8 +12,9 @@ verilator_cc_library(
     srcs = ["//:srcs" ],
     trace = True,
     includes = ["includes"],
+    cflags=[ "-std=c++11", "-fPIC", "-fno-stack-protector"],
     cpp_defines=["DVL_THREADED"],
-    cflags=[ "-std=c++11", "-fPIC"]
+    fast_copts=["-O3"],
     #deps = [":alu_lib"],
 )
 
