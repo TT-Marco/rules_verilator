@@ -203,6 +203,7 @@ def _verilator_cc_library(ctx):
 
 verilator_cc_library = rule(
     _verilator_cc_library,
+    output_to_genfiles=True,
     attrs = {
         "srcs": attr.label_list(
             doc = "List of verilog source files",

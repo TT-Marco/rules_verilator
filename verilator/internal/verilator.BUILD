@@ -3,6 +3,7 @@ package(default_visibility = ["//visibility:private"])
 licenses(["notice"])
 
 load("@rules_verilator//verilator/internal:flex_lexer_h.bzl", "flex_lexer_h")
+load("//:dpi_flags.bzl", "dpi_flags")
 flex_lexer_h(name = "flex_lexer_h")
 
 exports_files([
@@ -207,6 +208,7 @@ cc_library(
     ],
     #FIXME: this is a disgusting hack
     deps = [":svdpi"],
+    copts = dpi_flags,
     includes = ["include"]
 )
 

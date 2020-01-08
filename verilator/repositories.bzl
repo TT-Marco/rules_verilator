@@ -12,7 +12,7 @@ def _verilator_repository(ctx):
         sha256 = info.sha256,
         stripPrefix = info.strip_prefix,
     )
-
+    ctx.file("dpi_flags.bzl", "dpi_flags = {flags}\n".format(flags = repr(ctx.attr.dpi_cflags)))
     ctx.file("WORKSPACE", "workspace(name = {name})\n".format(name = repr(ctx.name)))
     ctx.symlink(ctx.attr._buildfile, "BUILD")
 
@@ -20,6 +20,23 @@ def _verilator_repository(ctx):
     # TODO: At least on OSX the default settings work. May need to change this
     # for other platforms.
     ctx.template("src/config_build.h", "src/config_build.h.in", {}, executable = False)
+
+def _verilator_repository_fork(ctx):
+    ctx.download_and_extract(
+        url = ctx.attr.url,
+        stripPrefix = ctx.attr.strip_prefix,
+    )
+    ctx.file("dpi_flags.bzl", "dpi_flags = {flags}\n".format(flags = repr(ctx.attr.dpi_cflags)))
+    ctx.file("WORKSPACE", "workspace(name = {name})\n".format(name = repr(ctx.name)))
+    ctx.symlink(ctx.attr._buildfile, "BUILD")
+
+    # Patch the repository so we have the correct settings
+    # TODO: At least on OSX the default settings work. May need to change this
+    # for other platforms.
+    ctx.template("src/config_build.h", "src/config_build.h.in", {}, executable = False)
+    ctx.template("include/verilated_config.h", "include/verilated_config.h.in", {}, executable=False)
+    ctx.file("src/config_rev.h", """static const char* const DTVERSION_rev = "UNKNOWN_REV";""")
+
 
 def _local_verilator_repository(ctx):
     ctx.file("WORKSPACE", "workspace(name = {name})\n".format(name = repr(ctx.name)))
@@ -36,11 +53,26 @@ verilator_repository = repository_rule(
     _verilator_repository,
     attrs = {
         "version": attr.string(mandatory = True),
+        "dpi_cflags": attr.string_list(default = ["--std=c++14"]),
         "_buildfile": attr.label(
             default = Label("@rules_verilator//verilator/internal:verilator.BUILD"),
         ),
     },
 )
+
+verilator_repository_fork = repository_rule(
+    _verilator_repository_fork,
+    attrs = {
+        "url": attr.string(mandatory = True),
+        "strip_prefix" : attr.string(mandatory = True),
+        "dpi_cflags": attr.string_list(default = ["--std=c++14"]),
+        "_buildfile": attr.label(
+            default = Label("@rules_verilator//verilator/internal:verilator.BUILD"),
+        ),
+    },
+)
+
+
 
 
 
@@ -82,6 +114,15 @@ def rules_verilator_toolchains(version = _DEFAULT_VERSION):
     repo_name = "verilator_v{version}".format(version = version)
     _maybe(verilator_repository, name = repo_name, version = version)
     native.register_toolchains("@rules_verilator//verilator/toolchains:v{}".format(version))
+
+def rules_verilator_fork_toolchains(url,strip_prefix, dpi_cflags = ["--std=c++14"]):
+    version = "fork"
+    repo_name = "verilator_v{version}".format(version = version)
+    _maybe(verilator_repository_fork, name = repo_name, url = url, strip_prefix = strip_prefix, dpi_cflags = dpi_cflags)
+    native.register_toolchains("@rules_verilator//verilator/toolchains:v{}".format(version))
+
+
+
 
 def _maybe(repo_rule, **kwargs):
     if kwargs["name"] not in native.existing_rules():

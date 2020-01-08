@@ -22,6 +22,7 @@ VERSION_INFO = dict([
     _info("4.016", ""),
     _info("4.014", ""),
     _info("local",""),
+    _info("fork", ""),
 ])
 
 DEFAULT_VERSION = "4.018"
