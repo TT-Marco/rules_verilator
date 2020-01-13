@@ -79,8 +79,27 @@ def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
         },
         progress_message = progress_message,
     )
-
     return odir
+
+#ignore me
+def _modify_for_hierarchical_verilation(ctx, idir, progress_message = None):
+    _HIERACHY_DPI_FIX = """
+    OUT=$1;
+    sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
+    sed -i.bak  's/t\ dpi_/t\ __attribute__((weak))\ dpi_/' "$OUT"/{top_module}__Dpi.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak
+    """.format(top_module = ctx.attr.mtop, prefix = ctx.attr.prefix)
+    args = ctx.actions.args()
+    args.add(idir.path)
+    ctx.actions.run_shell(
+        arguments = [args],
+        command = _HIERACHY_DPI_FIX,
+        inputs = [idir],
+        outputs = None,
+        execution_requirements = {
+            "no-remote": "1",
+        },
+        progress_message = progress_message,
+    )
 
 def _verilator_cc_library(ctx):
     """Produce a static library and C++ header files from a Verilog library"""
@@ -136,24 +155,23 @@ def _verilator_cc_library(ctx):
     args.add_all(ctx.attr.vopts, expand_directories = False)
     if ctx.attr.prebuilt_verilator:
         ctx.actions.run_shell(
-          arguments = [args],
-          command = verilator_toolchain.verilator_executable.path + " $*",
-          inputs = inputs,
-          outputs = [verilator_output],
-          progress_message = "[Verilator] Compiling {}".format(ctx.label),
-          execution_requirements = {
-              "no-sandbox": "1",
-          },
-
-        ) 
+            arguments = [args],
+            command = verilator_toolchain.verilator_executable.path + " $*",
+            inputs = inputs,
+            outputs = [verilator_output],
+            progress_message = "[Verilator] Compiling {}".format(ctx.label),
+            execution_requirements = {
+                "no-sandbox": "1",
+            },
+        )
     else:
         ctx.actions.run(
-          arguments = [args],
-          executable = verilator_toolchain.verilator_executable,
-          inputs = inputs,
-          unused_inputs_list = verilator_toolchain.verilator_executable,
-          outputs = [verilator_output],
-          progress_message = "[Verilator] Compiling {}".format(ctx.label),
+            arguments = [args],
+            executable = verilator_toolchain.verilator_executable,
+            inputs = inputs,
+            unused_inputs_list = verilator_toolchain.verilator_executable,
+            outputs = [verilator_output],
+            progress_message = "[Verilator] Compiling {}".format(ctx.label),
         )
 
     # Extract out just C++ files
@@ -181,6 +199,13 @@ def _verilator_cc_library(ctx):
         map_each = _only_hpp,
         progress_message = "[Verilator] Extracting C++ header files",
     )
+
+    if ctx.attr.stubbed_module:
+        _modify_for_hierarchical_verilation(
+            ctx,
+            verilator_output_cpp,
+            progress_message = "[Verilator] Hierarchy undocumented sauce",
+        )
 
     # Collect the verilator ouput and, if needed, generate a driver program
     srcs = [verilator_output_cpp]
@@ -275,10 +300,19 @@ verilator_cc_library = rule(
             doc = "Additional command line options to pass to Verilator",
             default = ["-Wall"],
         ),
-        "prebuilt_verilator" : attr.bool(
+        "prebuilt_verilator": attr.bool(
             doc = "Removes dependency on verilator executable -- use for remote caching",
-            default = True, #TODO: if merged into original verilator rules, set to false
+            default = True,  #TODO: if merged into original verilator rules, set to false
         ),
+        "stubbed_module": attr.bool(
+            doc = "Generate this module as a stub -- used for end user  hierarchical verilation. Do not set",
+            default = False,
+        ),
+        "cpp_includes" : attr.string_list(
+            doc = "Includes for generated cpp files."
+            mandatory = False
+          ),
+
         "_cc_toolchain": attr.label(
             default = Label("@bazel_tools//tools/cpp:current_cc_toolchain"),
         ),
