@@ -45,7 +45,7 @@ _HPP_SRC = ["h", "hh", "hpp"]
 def _only_cpp_slow(f):
     """Filter out slow files"""
     if "Slow" in f.path or f.extension in _HPP_SRC:
-      return f.path
+        return f.path
     return None
 
 def _only_cpp(f):
@@ -90,7 +90,7 @@ def _verilator_cc_library(ctx):
 
     # Gather all the Verilog source files, including transitive dependencies
     inputs = get_transitive_sources(
-        ctx.files.hdrs  + ctx.files.srcs,
+        ctx.files.hdrs + ctx.files.srcs,
         ctx.attr.deps,
     )
     srcs = get_transitive_sources(
@@ -98,20 +98,16 @@ def _verilator_cc_library(ctx):
         ctx.attr.deps,
     )
 
-
-
-
     # Default Verilator output prefix (e.g. "Vtop")
     mtop = ctx.label.name if ctx.attr.mtop == None else ctx.attr.mtop
 
-    cflags  = ctx.attr.cflags 
+    cflags = ctx.attr.cflags
     ldflags = ctx.attr.ldflags
 
     if ctx.attr.prefix != "V":
-        prefix = ctx.attr.prefix 
+        prefix = ctx.attr.prefix
     else:
         prefix = ctx.attr.prefix + ctx.attr.mtop
-
 
     # Output directories/files
     verilator_output = ctx.actions.declare_directory(prefix + "-gen")
@@ -133,18 +129,33 @@ def _verilator_cc_library(ctx):
     if ctx.attr.trace:
         args.add("--trace")
     if ctx.attr.cflags:
-        args.add_all(cflags,  before_each="-CFLAGS")
+        args.add_all(cflags, before_each = "-CFLAGS")
     if ctx.attr.ldflags:
-        args.add_all(ldflags, before_each="-LDFLAGS")
+        args.add_all(ldflags, before_each = "-LDFLAGS")
     args.add_all(srcs)
     args.add_all(ctx.attr.vopts, expand_directories = False)
-    ctx.actions.run(
-        arguments = [args],
-        executable = verilator_toolchain.verilator_executable,
-        inputs = inputs,
-        outputs = [verilator_output],
-        progress_message = "[Verilator] Compiling {}".format(ctx.label),
-    ) 
+    if ctx.attr.prebuilt_verilator:
+        ctx.actions.run_shell(
+          arguments = [args],
+          command = verilator_toolchain.verilator_executable.path + " $*",
+          inputs = inputs,
+          outputs = [verilator_output],
+          progress_message = "[Verilator] Compiling {}".format(ctx.label),
+          execution_requirements = {
+              "no-sandbox": "1",
+          },
+
+        ) 
+    else:
+        ctx.actions.run(
+          arguments = [args],
+          executable = verilator_toolchain.verilator_executable,
+          inputs = inputs,
+          unused_inputs_list = verilator_toolchain.verilator_executable,
+          outputs = [verilator_output],
+          progress_message = "[Verilator] Compiling {}".format(ctx.label),
+        )
+
     # Extract out just C++ files
     # Work around for https://github.com/bazelbuild/bazel/pull/8269
     _copy_tree(
@@ -155,7 +166,6 @@ def _verilator_cc_library(ctx):
         progress_message = "[Verilator] Extracting Slow C++ source files",
     )
 
-
     _copy_tree(
         ctx,
         verilator_output,
@@ -163,8 +173,6 @@ def _verilator_cc_library(ctx):
         map_each = _only_cpp,
         progress_message = "[Verilator] Extracting C++ source files",
     )
-       
-
 
     _copy_tree(
         ctx,
@@ -182,9 +190,12 @@ def _verilator_cc_library(ctx):
     defines = ["VM_TRACE"] if ctx.attr.trace else []
     fast_opt = ctx.attr.fast_copts if ctx.attr.fast_copts else []
     slow_opt = ctx.attr.slow_copts if ctx.attr.slow_copts else []
-    deps = list(verilator_toolchain.libs) 
+    deps = list(verilator_toolchain.libs)
+    if ctx.attr.ccdeps:
+        deps = deps + ctx.attr.ccdeps
     if ctx.attr.cpp_defines:
-      defines = defines + ctx.attr.cpp_defines
+        defines = defines + ctx.attr.cpp_defines
+
     #if ctx.attr.sysc:
     #    deps.append(ctx.attr._systemc)
 
@@ -195,15 +206,15 @@ def _verilator_cc_library(ctx):
         hdrs = hdrs,
         defines = defines,
         deps = deps,
-        cflags=cflags,
-        ldflags=ldflags,
-        fast_opt=fast_opt,
-        slow_opt=slow_opt
+        cflags = cflags,
+        ldflags = ldflags,
+        fast_opt = fast_opt,
+        slow_opt = slow_opt,
     )
 
 verilator_cc_library = rule(
     _verilator_cc_library,
-    output_to_genfiles=True,
+    output_to_genfiles = True,
     attrs = {
         "srcs": attr.label_list(
             doc = "List of verilog source files",
@@ -215,7 +226,10 @@ verilator_cc_library = rule(
             allow_files = [".v", ".sv", ".vh", ".svh", ".h"],
         ),
         "deps": attr.label_list(
-            doc = "List of verilog and C++ dependencies",
+            doc = "List of verilog dependencies",
+        ),
+        "ccdeps": attr.label_list(
+            doc = "List of C++ dependencies",
         ),
         "mtop": attr.string(
             doc = "Top level module. Defaults to the rule name if not specified",
@@ -224,7 +238,7 @@ verilator_cc_library = rule(
         "includes": attr.string_list(
             doc = "Include paths for verilator",
             mandatory = False,
-         ),
+        ),
         "trace": attr.bool(
             doc = "Enable tracing for Verilator",
             default = False,
@@ -235,23 +249,23 @@ verilator_cc_library = rule(
         ),
         "cflags": attr.string_list(
             doc = "C flags for the compiled verilated library",
-            mandatory = False
+            mandatory = False,
         ),
         "ldflags": attr.string_list(
             doc = "LD flags for the compiled verilated library",
-            mandatory = False
+            mandatory = False,
         ),
-        "cpp_defines" : attr.string_list(
+        "cpp_defines": attr.string_list(
             doc = "Defines to be passed to verilator output",
-            mandatory = False
+            mandatory = False,
         ),
-        "fast_copts"  : attr.string_list(
+        "fast_copts": attr.string_list(
             doc = "compiler flags for fast verilator output",
-            mandatory = False
+            mandatory = False,
         ),
-        "slow_copts"  : attr.string_list(
+        "slow_copts": attr.string_list(
             doc = "compiler flags for slow verilator output",
-            mandatory = False
+            mandatory = False,
         ),
         "sysc": attr.bool(
             doc = "Generate SystemC using the --sc Verilator option",
@@ -260,6 +274,10 @@ verilator_cc_library = rule(
         "vopts": attr.string_list(
             doc = "Additional command line options to pass to Verilator",
             default = ["-Wall"],
+        ),
+        "prebuilt_verilator" : attr.bool(
+            doc = "Removes dependency on verilator executable -- use for remote caching",
+            default = True, #TODO: if merged into original verilator rules, set to false
         ),
         "_cc_toolchain": attr.label(
             default = Label("@bazel_tools//tools/cpp:current_cc_toolchain"),

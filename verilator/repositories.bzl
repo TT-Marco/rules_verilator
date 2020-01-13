@@ -34,20 +34,18 @@ def _verilator_repository_fork(ctx):
     # TODO: At least on OSX the default settings work. May need to change this
     # for other platforms.
     ctx.template("src/config_build.h", "src/config_build.h.in", {}, executable = False)
-    ctx.template("include/verilated_config.h", "include/verilated_config.h.in", {}, executable=False)
+    ctx.template("include/verilated_config.h", "include/verilated_config.h.in", {}, executable = False)
     ctx.file("src/config_rev.h", """static const char* const DTVERSION_rev = "UNKNOWN_REV";""")
-
 
 def _local_verilator_repository(ctx):
     ctx.file("WORKSPACE", "workspace(name = {name})\n".format(name = repr(ctx.name)))
     ctx.symlink(ctx.attr.path, "verilator")
     ctx.symlink(ctx.attr._buildfile, "BUILD")
+
     # Patch the repository so we have the correct settings
     # TODO: At least on OSX the default settings work. May need to change this
     # for other platforms.
     ctx.template("src/config_build.h", "src/config_build.h.in", {}, executable = False)
-
-
 
 verilator_repository = repository_rule(
     _verilator_repository,
@@ -64,18 +62,13 @@ verilator_repository_fork = repository_rule(
     _verilator_repository_fork,
     attrs = {
         "url": attr.string(mandatory = True),
-        "strip_prefix" : attr.string(mandatory = True),
+        "strip_prefix": attr.string(mandatory = True),
         "dpi_cflags": attr.string_list(default = ["--std=c++14"]),
         "_buildfile": attr.label(
             default = Label("@rules_verilator//verilator/internal:verilator.BUILD"),
         ),
     },
 )
-
-
-
-
-
 
 def rules_verilator_dependencies(version = _DEFAULT_VERSION):
     _maybe(
@@ -97,32 +90,27 @@ def rules_verilator_dependencies(version = _DEFAULT_VERSION):
         sha256 = "5c57552a129b0d8eeb9252341ee975ec2720c35baf2f0d154756310c1ff572a0",
     )
 
-
 def local_rules_verilator_toolchains(path = ""):
     if path == "":
-      fail("No path to local verilator provided!")
+        fail("No path to local verilator provided!")
     repo_name = "verilator_v{version}".format(version = "local")
-    native. new_local_repository(
+    native.new_local_repository(
         name = "verilator_v{version}".format(version = "local"),
         path = path,
-        build_file = "@rules_verilator//verilator/internal:verilator.BUILD"
-)  
+        build_file = "@rules_verilator//verilator/internal:verilator.BUILD",
+    )
     native.register_toolchains("@rules_verilator//verilator/toolchains:v{}".format("local"))
-
 
 def rules_verilator_toolchains(version = _DEFAULT_VERSION):
     repo_name = "verilator_v{version}".format(version = version)
     _maybe(verilator_repository, name = repo_name, version = version)
     native.register_toolchains("@rules_verilator//verilator/toolchains:v{}".format(version))
 
-def rules_verilator_fork_toolchains(url,strip_prefix, dpi_cflags = ["--std=c++14"]):
+def rules_verilator_fork_toolchains(url, strip_prefix, dpi_cflags = ["--std=c++14"]):
     version = "fork"
     repo_name = "verilator_v{version}".format(version = version)
     _maybe(verilator_repository_fork, name = repo_name, url = url, strip_prefix = strip_prefix, dpi_cflags = dpi_cflags)
     native.register_toolchains("@rules_verilator//verilator/toolchains:v{}".format(version))
-
-
-
 
 def _maybe(repo_rule, **kwargs):
     if kwargs["name"] not in native.existing_rules():
