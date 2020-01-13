@@ -308,11 +308,10 @@ verilator_cc_library = rule(
             doc = "Generate this module as a stub -- used for end user  hierarchical verilation. Do not set",
             default = False,
         ),
-        "cpp_includes" : attr.string_list(
-            doc = "Includes for generated cpp files."
-            mandatory = False
-          ),
-
+        "cpp_includes": attr.string_list(
+            doc = "Includes for generated cpp files.",
+            mandatory = False,
+        ),
         "_cc_toolchain": attr.label(
             default = Label("@bazel_tools//tools/cpp:current_cc_toolchain"),
         ),
