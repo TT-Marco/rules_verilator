@@ -64,14 +64,17 @@ _COPY_TREE_SH = """
 OUT=$1; shift && mkdir -p "$OUT" && cp $* "$OUT"
 """
 
-def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
+def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None, extra_command = None):
     """Copy files from a TreeArtifact to a new directory"""
     args = ctx.actions.args()
     args.add(odir.path)
     args.add_all([idir], map_each = map_each)
+    shell_cmd = _COPY_TREE_SH
+    if extra_command:
+        shell_cmd = shell_cmd + "\n" + extra_command
     ctx.actions.run_shell(
         arguments = [args],
-        command = _COPY_TREE_SH,
+        command = shell_cmd,
         inputs = [idir],
         outputs = [odir],
         execution_requirements = {
@@ -80,26 +83,6 @@ def _copy_tree(ctx, idir, odir, map_each = None, progress_message = None):
         progress_message = progress_message,
     )
     return odir
-
-#ignore me
-def _modify_for_hierarchical_verilation(ctx, idir, progress_message = None):
-    _HIERACHY_DPI_FIX = """
-    OUT=$1;
-    sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
-    sed -i.bak  's/t\ dpi_/t\ __attribute__((weak))\ dpi_/' "$OUT"/{top_module}__Dpi.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak
-    """.format(top_module = ctx.attr.mtop, prefix = ctx.attr.prefix)
-    args = ctx.actions.args()
-    args.add(idir.path)
-    ctx.actions.run_shell(
-        arguments = [args],
-        command = _HIERACHY_DPI_FIX,
-        inputs = [idir],
-        outputs = None,
-        execution_requirements = {
-            "no-remote": "1",
-        },
-        progress_message = progress_message,
-    )
 
 def _verilator_cc_library(ctx):
     """Produce a static library and C++ header files from a Verilog library"""
@@ -127,7 +110,6 @@ def _verilator_cc_library(ctx):
         prefix = ctx.attr.prefix
     else:
         prefix = ctx.attr.prefix + ctx.attr.mtop
-
     # Output directories/files
     verilator_output = ctx.actions.declare_directory(prefix + "-gen")
     verilator_output_cpp = ctx.actions.declare_directory(prefix + ".cpp")
@@ -184,13 +166,28 @@ def _verilator_cc_library(ctx):
         progress_message = "[Verilator] Extracting Slow C++ source files",
     )
 
-    _copy_tree(
-        ctx,
-        verilator_output,
-        verilator_output_cpp,
-        map_each = _only_cpp,
-        progress_message = "[Verilator] Extracting C++ source files",
-    )
+    if ctx.attr.stubbed_module:
+        stub_cmd = """
+        sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
+        sed -i.bak  's/t\ dpi_/t\ __attribute__((weak))\ dpi_/' "$OUT"/{prefix}__Dpi.cpp && rm "$OUT"/{prefix}__Dpi.cpp.bak
+
+        """.format(top_module = ctx.attr.mtop, prefix = prefix)
+        _copy_tree(
+            ctx,
+            verilator_output,
+            verilator_output_cpp,
+            map_each = _only_cpp,
+            progress_message = "[Verilator] Extracting C++ source files",
+            extra_command = stub_cmd,
+        )
+    else:
+        _copy_tree(
+            ctx,
+            verilator_output,
+            verilator_output_cpp,
+            map_each = _only_cpp,
+            progress_message = "[Verilator] Extracting C++ source files",
+        )
 
     _copy_tree(
         ctx,
@@ -199,13 +196,6 @@ def _verilator_cc_library(ctx):
         map_each = _only_hpp,
         progress_message = "[Verilator] Extracting C++ header files",
     )
-
-    if ctx.attr.stubbed_module:
-        _modify_for_hierarchical_verilation(
-            ctx,
-            verilator_output_cpp,
-            progress_message = "[Verilator] Hierarchy undocumented sauce",
-        )
 
     # Collect the verilator ouput and, if needed, generate a driver program
     srcs = [verilator_output_cpp]

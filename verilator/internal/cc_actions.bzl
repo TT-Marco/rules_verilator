@@ -98,12 +98,14 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         requested_features = ctx.features,
         unsupported_features = ctx.disabled_features,
     )
-
-    compilation_contexts = [dep[CcInfo].compilation_context for dep in deps]
+    cpp_includes = ctx.attr.cpp_includes if ctx.attr.cpp_includes else []  
+    compilation_contexts = [dep[CcInfo].compilation_context for dep in deps] 
+    includes = [hdrs[-1].path] if ctx.attr.stubbed_module else []
     cc_compilation_context, cc_compilation_outputs = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
         feature_configuration = feature_configuration,
+        includes = includes,
         cc_toolchain = cc_toolchain,
         srcs = srcs,
         defines = defines,
@@ -111,6 +113,8 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         public_hdrs = hdrs,
         compilation_contexts = compilation_contexts,
     )
+
+
     cc_compilation_outputs_slow=[]
     if slow_srcs != None:
       cc_compilation_context_slow, cc_compilation_outputs_slow = cc_common.compile(
@@ -140,7 +144,6 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         linking_contexts = linking_contexts,
         compilation_outputs_slow = cc_compilation_outputs_slow
     )
-
     return [
         DefaultInfo(files = depset(linking_info.cc_linking_outputs.static_libraries)),
         CcInfo(
