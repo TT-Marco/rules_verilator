@@ -115,14 +115,17 @@ def _verilator_cc_library(ctx):
     verilator_output_cpp = ctx.actions.declare_directory(prefix + ".cpp")
     verilator_output_slow = ctx.actions.declare_directory(prefix + "__Slow.cpp")
     verilator_output_hpp = ctx.actions.declare_directory(prefix + ".h")
-
+    #garb = ctx.actions.declare_directory("garb")
     # Run Verilator
     args = ctx.actions.args()
     if ctx.attr.sysc:
         args.add("--sc")
     else:
         args.add("--cc")
-    args.add("--Mdir", verilator_output.path)
+    if ctx.attr.prebuilt_verilator:
+        args.add("--Mdir", "garbagedir") #TODO: find a better fix.. this is sinful beyond compare
+    else:
+        args.add("--Mdir", verilator_output.path)
     args.add("--prefix", prefix)
     args.add("--top-module", mtop)
     if ctx.attr.includes:
@@ -138,7 +141,7 @@ def _verilator_cc_library(ctx):
     if ctx.attr.prebuilt_verilator:
         ctx.actions.run_shell(
             arguments = [args],
-            command = verilator_toolchain.verilator_executable.path + " $*",
+            command = verilator_toolchain.verilator_executable.path + " $* && mv garbagedir/* " + verilator_output.path,
             inputs = inputs,
             outputs = [verilator_output],
             progress_message = "[Verilator] Compiling {}".format(ctx.label),
@@ -155,6 +158,7 @@ def _verilator_cc_library(ctx):
             outputs = [verilator_output],
             progress_message = "[Verilator] Compiling {}".format(ctx.label),
         )
+    
 
     # Extract out just C++ files
     # Work around for https://github.com/bazelbuild/bazel/pull/8269
