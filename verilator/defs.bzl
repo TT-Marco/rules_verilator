@@ -44,14 +44,16 @@ _HPP_SRC = ["h", "hh", "hpp"]
 
 def _only_cpp_slow(f):
     """Filter out slow files"""
-    #Adding syms to see if anything gets sped up.. 
-    if "Slow" in f.path or "__Syms" in f.path or f.extension in _HPP_SRC: 
+
+    #Adding syms to see if anything gets sped up..
+    if "Slow" in f.path or "__Syms" in f.path or f.extension in _HPP_SRC:
         return f.path
     return None
 
 def _only_cpp(f):
     """Filter for just non-slow C++ source/headers"""
-    if f.extension in _CPP_SRC + _HPP_SRC and "Slow" not in f.path and "__Syms" not in f.path:
+
+    if f.extension in _CPP_SRC and "Slow" not in f.path and "__Syms" not in f.path or f.extension in _HPP_SRC:
         return f.path
     return None
 
@@ -111,6 +113,7 @@ def _verilator_cc_library(ctx):
         prefix = ctx.attr.prefix
     else:
         prefix = ctx.attr.prefix + ctx.attr.mtop
+
     # Output directories/files
     verilator_output = ctx.actions.declare_directory(prefix + "-gen")
     verilator_output_cpp = ctx.actions.declare_directory(prefix + ".cpp")
