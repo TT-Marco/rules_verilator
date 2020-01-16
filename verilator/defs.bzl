@@ -129,10 +129,6 @@ def _verilator_cc_library(ctx):
         args.add("-I" + " -I".join(ctx.attr.includes))
     if ctx.attr.trace:
         args.add("--trace")
-    if ctx.attr.cflags:
-        args.add_all(cflags, before_each = "-CFLAGS")
-    if ctx.attr.ldflags:
-        args.add_all(ldflags, before_each = "-LDFLAGS")
     args.add_all(srcs)
     args.add_all(ctx.attr.vopts, expand_directories = False)
     if ctx.attr.prebuilt_verilator:
@@ -170,7 +166,6 @@ def _verilator_cc_library(ctx):
         stub_cmd = """
         sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
         sed -i.bak  's/t\ dpi_/t\ __attribute__((weak))\ dpi_/' "$OUT"/{prefix}__Dpi.cpp && rm "$OUT"/{prefix}__Dpi.cpp.bak
-
         """.format(top_module = ctx.attr.mtop, prefix = prefix)
         _copy_tree(
             ctx,

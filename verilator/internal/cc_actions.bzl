@@ -10,11 +10,11 @@ def _link_static_library(
         name,
         actions,
         feature_configuration,
-        compilation_outputs, 
+        compilation_outputs,
         cc_toolchain,
         user_link_flags = [],
         linking_contexts = [],
-        compilation_outputs_slow=[]):
+        compilation_outputs_slow = []):
     """Link object files into a static library"""
     static_library = actions.declare_file("lib{name}.a".format(name = name))
     link_tool = cc_common.get_tool_for_action(
@@ -43,7 +43,8 @@ def _link_static_library(
     # Extract the object files
     object_files = compilation_outputs.object_files(use_pic = False)
     if compilation_outputs_slow != []:
-      object_files = object_files + compilation_outputs_slow.object_files(use_pic=False)
+        object_files = object_files + compilation_outputs_slow.object_files(use_pic = False)
+
     # Run linker
     args = actions.args()
     args.add_all(link_flags)
@@ -89,7 +90,7 @@ def _link_static_library(
         ),
     )
 
-def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines = [],  cflags=[], ldflags=[], fast_opt=[],slow_opt=[]):
+def cc_compile_and_link_static_library(ctx, srcs, slow_srcs, hdrs, deps, defines = [], cflags = [], ldflags = [], fast_opt = [], slow_opt = []):
     """Compile and link C++ source into a static library"""
     cc_toolchain = find_cpp_toolchain(ctx)
     feature_configuration = cc_common.configure_features(
@@ -98,9 +99,26 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         requested_features = ctx.features,
         unsupported_features = ctx.disabled_features,
     )
-    cpp_includes = ctx.attr.cpp_includes if ctx.attr.cpp_includes else []  
-    compilation_contexts = [dep[CcInfo].compilation_context for dep in deps] 
+    cpp_includes = ctx.attr.cpp_includes if ctx.attr.cpp_includes else []
+    compilation_contexts = [dep[CcInfo].compilation_context for dep in deps]
+
+    #allows for easy includes of stubbed modeules -- opaque to end user
+    #maybe should add this for all verilation
     includes = [hdrs[-1].path] if ctx.attr.stubbed_module else []
+
+    #Flags for suppressing compiler warnings, from verilator itself
+    default_flags = [
+        "-faligned-new",
+        "-fbracket-depth=4096",
+        "-Qunused-arguments",
+        "-Wno-parentheses-equality",
+        "-Wno-sign-compare",
+        "-Wno-uninitialized",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-Wno-shadow",
+    ]
+
     cc_compilation_context, cc_compilation_outputs = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
@@ -109,27 +127,26 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
         cc_toolchain = cc_toolchain,
         srcs = srcs,
         defines = defines,
-        user_compile_flags=cflags + fast_opt,
+        user_compile_flags = default_flags + cflags + fast_opt,
         public_hdrs = hdrs,
         compilation_contexts = compilation_contexts,
     )
 
-
-    cc_compilation_outputs_slow=[]
+    cc_compilation_outputs_slow = []
     if slow_srcs != None:
-      cc_compilation_context_slow, cc_compilation_outputs_slow = cc_common.compile(
-          name = ctx.label.name,
-          actions = ctx.actions,
-          feature_configuration = feature_configuration,
-          cc_toolchain = cc_toolchain,
-          srcs = slow_srcs,
-          defines = defines,
-          user_compile_flags=cflags + slow_opt,
-          public_hdrs = hdrs,
-          compilation_contexts = compilation_contexts,
-      )
-     # cc_compilation_outputs = cc_compilation_outputs + cc_compilation_outputs_slow
+        cc_compilation_context_slow, cc_compilation_outputs_slow = cc_common.compile(
+            name = ctx.label.name,
+            actions = ctx.actions,
+            feature_configuration = feature_configuration,
+            cc_toolchain = cc_toolchain,
+            srcs = slow_srcs,
+            defines = defines,
+            user_compile_flags = default_flags + cflags + slow_opt,
+            public_hdrs = hdrs,
+            compilation_contexts = compilation_contexts,
+        )
 
+    # cc_compilation_outputs = cc_compilation_outputs + cc_compilation_outputs_slow
 
     # TODO: Custom link command
     # Workaround for https://github.com/bazelbuild/bazel/issues/6309
@@ -138,11 +155,11 @@ def cc_compile_and_link_static_library(ctx, srcs,slow_srcs,hdrs, deps, defines =
     linking_info = _link_static_library(
         name = ctx.label.name,
         actions = ctx.actions,
-        compilation_outputs = cc_compilation_outputs, 
+        compilation_outputs = cc_compilation_outputs,
         cc_toolchain = cc_toolchain,
         feature_configuration = feature_configuration,
         linking_contexts = linking_contexts,
-        compilation_outputs_slow = cc_compilation_outputs_slow
+        compilation_outputs_slow = cc_compilation_outputs_slow,
     )
     return [
         DefaultInfo(files = depset(linking_info.cc_linking_outputs.static_libraries)),
