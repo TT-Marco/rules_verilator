@@ -109,8 +109,6 @@ def cc_compile_and_link_static_library(ctx, srcs, slow_srcs, hdrs, deps, defines
     #Flags for suppressing compiler warnings, from verilator itself
     default_flags = [
         "-faligned-new",
-        "-fbracket-depth=4096",
-        "-Qunused-arguments",
         "-Wno-parentheses-equality",
         "-Wno-sign-compare",
         "-Wno-uninitialized",
