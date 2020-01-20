@@ -158,17 +158,9 @@ def _verilator_cc_library(ctx):
 
     # Extract out just C++ files
     # Work around for https://github.com/bazelbuild/bazel/pull/8269
-    _copy_tree(
-        ctx,
-        verilator_output,
-        verilator_output_slow,
-        map_each = _only_cpp_slow,
-        progress_message = "[Verilator] Extracting Slow C++ source files",
-    )
-
+    
     if ctx.attr.stubbed_module:
-        stub_cmd = """
-        sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
+        stub_cmd_fst = """
         sed -i.bak  's/t\ dpi_/t\ __attribute__((weak))\ dpi_/' "$OUT"/{prefix}__Dpi.cpp && rm "$OUT"/{prefix}__Dpi.cpp.bak
         """.format(top_module = ctx.attr.mtop, prefix = prefix)
         _copy_tree(
@@ -177,8 +169,22 @@ def _verilator_cc_library(ctx):
             verilator_output_cpp,
             map_each = _only_cpp,
             progress_message = "[Verilator] Extracting C++ source files",
-            extra_command = stub_cmd,
+            extra_command = stub_cmd_fst,
         )
+        stub_cmd_slow= """
+        sed -i.bak  's/"{top_module}\./"/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak;
+        sed -i.bak  's/"{top_module}"/""/' "$OUT"/{prefix}__Syms.cpp && rm "$OUT"/{prefix}__Syms.cpp.bak
+        """.format(top_module = ctx.attr.mtop, prefix = prefix)
+
+        _copy_tree(
+            ctx,
+            verilator_output,
+            verilator_output_slow,
+            map_each = _only_cpp_slow,
+            progress_message = "[Verilator] Extracting Slow C++ source files",
+            extra_command = stub_cmd_slow,
+        )
+
     else:
         _copy_tree(
             ctx,
@@ -187,6 +193,15 @@ def _verilator_cc_library(ctx):
             map_each = _only_cpp,
             progress_message = "[Verilator] Extracting C++ source files",
         )
+        _copy_tree(
+            ctx,
+            verilator_output,
+            verilator_output_slow,
+            map_each = _only_cpp_slow,
+            progress_message = "[Verilator] Extracting Slow C++ source files",
+        )
+
+
 
     _copy_tree(
         ctx,
