@@ -197,7 +197,17 @@ cc_library(
         "include/verilatedos.h",
         "include/verilated_cov.h",
         "include/verilated_cov_key.h",
-        "include/vltstd/svdpi.h"
+        "include/verilated_imp.h",
+        "include/verilated_intrinsics.h",
+        "include/verilated_save.h",
+        "include/verilated_syms.h",
+        "include/verilated_threads.h",
+        "include/verilated_trace.h",
+        "include/verilated_unordered_set_map.h",
+        "include/verilated_vcd_sc.h",
+        "include/verilated_vpi.h",
+        "include/vltstd/svdpi.h".
+        "include/vltstd/vpi_user.h"
     ],
     strip_include_prefix = "include/",
     visibility = ["//visibility:public"],
